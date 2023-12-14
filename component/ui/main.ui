@@ -14,24 +14,24 @@
    <string>MainWindow</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">border: 1px solid #333;</string>
+   <string notr="true"/>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout" stretch="1,4,2">
     <property name="spacing">
-     <number>0</number>
+     <number>6</number>
     </property>
     <property name="leftMargin">
-     <number>0</number>
+     <number>9</number>
     </property>
     <property name="topMargin">
-     <number>0</number>
+     <number>9</number>
     </property>
     <property name="rightMargin">
-     <number>0</number>
+     <number>9</number>
     </property>
     <property name="bottomMargin">
-     <number>0</number>
+     <number>9</number>
     </property>
     <item>
      <widget class="QFrame" name="header">
@@ -162,7 +162,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>24</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

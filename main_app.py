@@ -1,6 +1,9 @@
 from PySide6.QtWidgets import QApplication, QMainWindow, QLineEdit, QTextEdit, QWidget, QFileSystemModel, QAbstractItemView, QMenu, QTreeView, QVBoxLayout, QFrame, QLabel, QSizePolicy, QSpacerItem, QHBoxLayout
-from PySide6.QtCore import Qt,QFileSystemWatcher
+from PySide6.QtCore import Qt,QFileSystemWatcher, QSize
 from PySide6.QtGui import QCursor, QDragEnterEvent, QDropEvent, QKeyEvent, QAction
+# 
+from component.ui.main_ui import Ui_MainWindow
+# 
 import shutil
 import os
 import sys
@@ -27,18 +30,105 @@ os.makedirs(outputMP4, exist_ok=True)
 class File_manager(QWidget):
     def __init__(self,name, path):
         super().__init__()
+        self.setStyleSheet(u'file_namager')
         # veriable 
         self.path = path
         self.name = name
         self.current_list = []
-
         self.is_rename = False 
+        self.list_item_selected = 0
+        
+        self.setMinimumSize(QSize(200,300))
+
+        
         # add layout
         self.setupUi()
         # add model
         self.setupModel()
         # add menu
         self.setup_menu()
+        
+        # add stylesheet
+        self.setStyleSheet('''
+            * {
+                background-color: #000;
+            }
+            #file_namager {
+                background-color: #000;
+            }
+            QTreeView {
+                background-color: #191919; /* Set the background color */
+                color: #d7ffff;
+                alternate-background-color: #ddd; /* Set the alternate row color */
+                margin-right: -1px;
+            }
+            QTreeView::item {
+                padding: 0px; /* Set padding for each item */
+            }
+            QTreeView::item:hover {
+                background-color: #333; /* Set the background color for selected items */
+                color: #d7ffff; /* Set the text color for selected items */
+            }
+            QTreeView::item:selected {
+                background-color: #444; /* Set the background color for selected items */
+                color: #d7ffff; /* Set the text color for selected items */
+            }
+            QHeaderView::section {
+                background-color: #29292d;
+                color: #fff;
+                font-size: 12px;
+                text-align: center;
+                font-weight: bold;
+                margin-right: -1px;
+            }
+            #list_frame {
+                background-color: #333333;
+                color: #fff;
+            }
+            QLabel{ 
+               color: #fff;
+               background-color: #333333; 
+            }
+            /* custom vertical bar*/
+            QScrollBar:vertical {
+                background-color: #000; 
+                width: 8px; 
+                margin: 0px 0px 0px 0px; 
+            }
+            QScrollBar::handle:vertical {
+                border-radius: 4px;
+                background: #515050; 
+            }
+            QScrollBar::handle:vertical:hover {
+                border-radius: 4px;
+                background: #4d4d4d; 
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+                background-color: #191919;
+            }
+            
+            /* custom horizontal */
+            QScrollBar:horizontal {
+                background: #000;
+                height: 8px; 
+                margin: 0px 0px 0px 0px; 
+            }
+            QScrollBar::handle:horizontal {
+                border-radius: 4px;
+                background: #515050; 
+            }
+            QScrollBar::handle:horizontal:hover {
+                border-radius: 4px;
+                background: #4d4d4d; 
+            }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal,
+            QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+                background: #191919; 
+            }
+        ''')
+        
+        
     
     #setup UI   
     def setupUi(self):
@@ -46,10 +136,16 @@ class File_manager(QWidget):
         self.verticalLayout = QVBoxLayout(self)
         # create tree view
         self.tree_view = QTreeView()
+        self.tree_view.setObjectName(u"treeView")        
+        self.tree_view.setAcceptDrops(True)
+        self.tree_view.setDragEnabled(True)
+        self.tree_view.setDragDropMode(QTreeView.InternalMove)
         
-        
+        # create frame
         self.frame = QFrame()
         self.frame_layout = QHBoxLayout(self.frame)
+        self.frame.setObjectName(u"list_frame")        
+        
         # list label
         self.list_label = QLabel(self.name)
         # list count label
@@ -57,18 +153,18 @@ class File_manager(QWidget):
         # list count
         self.list_count = QLabel()
         # 
-        self.list_item_select_label = QLabel('select item')
+        self.list_item_select_label = QLabel('')
         self.list_item_select = QLabel()
         
         # add label to widget
         self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
         # 
-        self.frame_layout.addWidget(self.list_label)
+        self.frame_layout.addWidget(self.list_label,0, Qt.AlignVCenter)
         # 
         self.frame_layout.addItem(self.horizontalSpacer)
         # 
-        self.frame_layout.addWidget(self.list_item_select)
-        self.frame_layout.addWidget(self.list_item_select_label)
+        self.frame_layout.addWidget(self.list_item_select,0, Qt.AlignVCenter)
+        self.frame_layout.addWidget(self.list_item_select_label,0, Qt.AlignVCenter)
         # 
         self.frame_layout.addItem(self.horizontalSpacer)
         # 
@@ -157,7 +253,7 @@ class File_manager(QWidget):
     def handle_currentChange(self, e):
         self.current_select = []
         self.current_list.append(e)
-        if self.is_rename and len(self.current_list) >=2:
+        if len(self.current_list) >=2:
             prev_index = self.current_list.pop(0)
             self.tree_view.setIndexWidget(prev_index, None)
         for item in self.tree_view.selectedIndexes():
@@ -171,7 +267,17 @@ class File_manager(QWidget):
         if self.is_rename and not selected_indexes:
             prev_index = self.current_list.pop(0)
             self.tree_view.setIndexWidget(prev_index, None)
-            
+        if selected_indexes:
+            self.list_item_selected += (int(len(selected_indexes))/4)
+        if deselected_indexes:
+           self.list_item_selected -= (int(len(deselected_indexes))/4)
+        if self.list_item_selected > 0:
+            self.list_item_select_label.setText('select')
+            self.list_item_select.setText(str(int(self.list_item_selected)))
+        else:
+            self.list_item_select_label.setText('')
+            self.list_item_select.setText('')
+                    
     # delete item
     def delete_item(self):
         for item in self.tree_view.selectedIndexes():
@@ -215,36 +321,56 @@ class File_manager(QWidget):
     # key event
     def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() == 67:
-            list_text = ['la:///' + os.path.join(self.path, item.data(Qt.DisplayRole)) for item in self.list_item.selectedIndexes()]
+            list_text = ['la:///' + os.path.join(self.path, item.data(Qt.DisplayRole)) for item in self.tree_view.selectedIndexes()]
             QApplication.clipboard().setText('\n'.join(list_text))
         if event.key() == 16777223:
             self.delete_item()
                 
         if event.key() == 86:
             clipboards = QApplication.clipboard().text().split('\n')
-                
             for clipboard in clipboards:
-                if clipboard.startswith('file:///'):
-                    old_file_path = clipboard[8:]
-                    new_file_path = os.path.join(self.path, old_file_path.split('/')[-1])
-                elif clipboard.startswith('la:///'):
-                    old_file_path = clipboard[8:]
-                    new_file_path = os.path.join(self.path, old_file_path.split('\\')[-1])
-                if os.path.isfile(old_file_path):
-                        shutil.copyfile(old_file_path,new_file_path)
-                elif os.path.isdir(old_file_path):
-                        shutil.copytree(old_file_path,new_file_path)
+                try:
+                    print(clipboard)
+                    if clipboard.startswith('file:///'):
+                        old_file_path = clipboard[8:]
+                        new_file_path = os.path.join(self.path, old_file_path.split('/')[-1])
+                    elif clipboard.startswith('la:///'):
+                        old_file_path = clipboard[8:]
+                        new_file_path = os.path.join(self.path, old_file_path.split('\\')[-1])
+                    if os.path.isfile(old_file_path):
+                            shutil.copyfile(old_file_path,new_file_path)
+                    elif os.path.isdir(old_file_path):
+                            shutil.copytree(old_file_path,new_file_path)
+                except Exception as message:
+                    print(message)
+                    return False
         return super().keyPressEvent(event)
 
             
-class Main_ui(QMainWindow):
+class Main_ui(QMainWindow,Ui_MainWindow):
     def __init__(self):
         super().__init__()
-        self.path = inputFolders
-        file_manager = File_manager(name='Input', path=self.path)
-        self.resize(350,400)
-        self.setCentralWidget(file_manager)
-
+        self.setupUi(self)
+        self.setStyleSheet("#MainWindow {background-color: #000;}") 
+        self.input_path = inputFolders
+        self.output_path = outputAudio
+        self.img_path = imgFoders
+        self.audio_path = audioFolders
+        self.vid_path = outputMP4
+        # 
+        self.input_folder = File_manager(name='Input', path=self.input_path)
+        self.output_folder = File_manager(name='Output', path=self.output_path)
+        self.img_folder = File_manager(name='Img', path=self.img_path)
+        self.audio_folder = File_manager(name='Aduio', path=self.audio_path)
+        self.vid_folder = File_manager(name='Vid', path=self.vid_path)
+        
+        self.content_layout.setSpacing(6)
+        self.content_layout.addWidget(self.input_folder)
+        self.content_layout.addWidget(self.output_folder)
+        self.content_layout.addWidget(self.img_folder)
+        self.content_layout.addWidget(self.audio_folder)
+        self.content_layout.addWidget(self.vid_folder)
+        
 
 if __name__ == '__main__':
     app = QApplication([])
